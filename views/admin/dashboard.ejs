@@ -1,0 +1,67 @@
+<%-include('../header.ejs') %>
+
+    <br><br>
+
+    <h1 class="text-center mt-5 bg-info">Display</h1>
+    <div class="container mt-5">
+
+
+
+        <table class="table table-bordered text-center">
+            <tr>
+                <th style="background-color: black; color: white;">Id</th>
+                <th style="background-color: black; color: white;">name</th>
+                <th style="background-color: black; color: white;">email</th>
+                <th style="background-color: black; color: white;">course</th>
+                <th style="background-color: black; color: white;">Status</th>
+                <th style="background-color: black; color: white;">comment</th>
+                <th style="background-color: black; color: white;"></th>
+                <th style="background-color: black; color: white;">Action</th>
+
+            </tr>
+            <% d.forEach((item)=>{ %>
+                <tr>
+                    <td class="bg-warning">
+                        <%= item._id %>
+                    </td>
+                    <td class="bg-warning">
+                        <%= item.name %>
+                    </td>
+                    <td class="bg-warning">
+                        <%= item.email %>
+                    </td>
+                    <td class="bg-warning">
+                        <%= item.course %>
+                    </td>
+                    <td class="bg-warning">
+                        <%= item.status %>
+                    </td>
+                    <td class="bg-warning">
+                        <form action="/update_status/<%= item._id %>" method="post">
+                            <textarea name="comment" class="form-control"></textarea>
+                            <input type="hidden" name="name" value="<%= item.name %>">
+                            <input type="hidden" name="email" value="<%= item.email %>">
+                    </td>
+                    <td class="bg-warning">
+                        <button type="submit" name="status" class="btn btn-success" value="Approved">Approved</button>
+                            <button type="submit" name="status" class="btn btn-danger" value="Reject">Reject</button>
+                            </form>
+                    </td>
+
+
+                    <td class="bg-warning">
+                        <a href="/courseView/<%=item._id%>" class="btn btn-primary">View</a>
+                        <a href="/courseEdit/<%=item._id%>" class="btn btn-primary">Edit</a>
+                        <a href="/courseDelete/<%=item._id%>" class="btn btn-primary">Delete</a>
+                    </td>
+                </tr>
+
+                <% }) %>
+
+        </table>
+    </div>
+
+
+
+
+    <%-include('../footer.ejs') %>

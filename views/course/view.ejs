@@ -1,0 +1,29 @@
+<%-include('../header.ejs')    %>    
+<br><br>
+<h1 class="text-center mt-5 bg-warning">display view</h1>
+
+<div class="container mt-5">
+
+<table class=" table table-bordered text-center">
+    <tr>
+        <th colspan="5" style="color: white; background-color: black;">course view</th>
+    </tr>
+    <tr>
+        <th class="bg-info">id</th>
+        <th class="bg-info">name</th>
+        <th class="bg-info">email</th>
+        <th class="bg-info">course</th>
+    </tr>
+    
+    
+        <tr>
+            <td  class="bg-success"><%= d._id %></td>
+            <td class="bg-success"><%= d.name %></td>
+            <td class="bg-success"><%= d.email %></td>
+            <td class="bg-success"><%= d.course %></td>
+            
+    </tr>
+    
+</table>
+</div>
+<%-include('../footer.ejs') %>
