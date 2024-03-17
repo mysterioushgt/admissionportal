@@ -48,4 +48,4 @@ route.get("/courseDelete/:id",checkUserAuth,CourseController.courseDelete)
 
 route.post('/contactUs' , ContactController.contactUs)
 
-module.exports=route
+module.exports= route
