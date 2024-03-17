@@ -1,55 +1,52 @@
-const mongoose = require("mongoose");
+const mongoose = require('mongoose');
 
-const CourseSchema = new mongoose.Schema(
-    {
-        name: {
-            type: String,
-            Required: true,
-        },
-        email: {
-            type: String,
-            Required: true,
-        },
-        phone: {
-            type: String,
-            Required: true,
-        },
-        dob: {
-            type: String,
-            Required: true,
-        },
-        address: {
-            type: String,
-            Required: true,
-        },
-        gender: {
-            type: String,
-            Required: true,
-        },
-        education: {
-            type: String,
-            Required: true,
-        },
-        course: {
-            type: String,
-            Required: true,
-        },
-        user_id: {
-            type: String,
-            Required: true,
-        },
-        status: {
-            type: String,
-            default: 'Pending',
-        },
-        comment: {
-            type: String,
-            default: 'Pending',
-        }
+const CourseSchema = new mongoose.Schema({
+    name: {
+        type: String,
+        Required: true,
     },
-    { timestamps: true }
-);
+    email: {
+        type: String,
+        Required: true,
+    },
+    phone: {
+        type: String,
+        Required: true,
+    },
+    dob: {
+        type: String,
+        Required: true,
+    },
+    address: {
+        type: String,
+        Required: true,
+    },
+    gender: {
+        type: String,
+        Required: true,
+    },
+    education: {
+        type: String,
+        Required: true,
+    },
+    course: {
+        type: String,
+        Required: true,
+    },
+    user_id:{
+        type:String,
+        Required:true,
+    },
+    status:{
+        type:String,
+        default:"pending"
+    },
+    comment:{
+        type:String,
+        default:"pending"
+    }
 
-const CourseModel = mongoose.model("course", CourseSchema);
 
-module.exports = CourseModel;
+}, { timestamps: true })//jb ham insert krege to 2 field dega createdadd -->date time btyegi or update
+const CourseModel = mongoose.model('course', CourseSchema)
+module.exports = CourseModel

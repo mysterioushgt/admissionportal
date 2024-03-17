@@ -4,6 +4,9 @@ const cloudinary = require("cloudinary")
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const CourseModel = require('../models/course')
+const nodemailer = require("nodemailer");
+const randomstring = require("randomstring");
+
 
 cloudinary.config({
     cloud_name: 'dnzs5c9q3',
@@ -11,12 +14,14 @@ cloudinary.config({
     api_secret: 'QyINe3Q4WivgC2eTmlsZoYwSDRc'
 });
 
+
 class FrontController {
     //static method
     static login = async (req, res) => {
         try {
             //res.send("login page")
-            res.render('login', { message: req.flash('success'), msg: req.flash('error') });
+            res.render('login',
+                { message: req.flash('success'), msg: req.flash('error') });
         } catch (error) {
             console.log(error);
         }
@@ -32,7 +37,7 @@ class FrontController {
     static home = async (req, res) => {
         ;
         try {
-            const { name, image, email ,id,course } = req.userData
+            const { name, image, email, id, course } = req.userData
             const btech = await CourseModel.findOne({ user_id: id, course: "btech" })
             const bca = await CourseModel.findOne({ user_id: id, course: "bca" })
             const mca = await CourseModel.findOne({ user_id: id, course: "mca" })
@@ -52,12 +57,64 @@ class FrontController {
     }
     static contact = async (req, res) => {
         try {
-            const { name, image } = req.userData
-            res.render("contact", { n: name, i: image })
-        } catch {
-            console.log(error)
+            const { name, email, image, id } = req.userData;
+            const data = await CourseModel.findOne({ user_id: id })
+            // console.log(data);
+            res.render('contact', { n: name, e: email, d: data, i: image });
+        } catch (err) {
+            console.log(err);
         }
     }
+    static forgetPasswordVerify = async (req, res) => {
+        try {
+            const { email } = req.body;
+            const userData = await UserModel.findOne({ email: email });
+            //console.log(userData)
+            if (userData) {
+                const randomString = randomstring.generate();
+                await UserModel.updateOne(
+                    { email: email },
+                    { $set: { token: randomString } }
+                );
+                this.sendEmail(userData.name, userData.email, randomString);
+                req.flash("success", "Plz Check Your mail to reset Your Password!");
+                res.redirect("/");
+            } else {
+                req.flash("error", "You are not a registered Email");
+                res.redirect("/");
+            }
+        } catch (error) {
+            console.log(error);
+        }
+    };
+    static resetPassword = async (req, res) => {
+        try {
+            const token = req.query.token;
+            const tokenData = await UserModel.findOne({ token: token });
+            if (tokenData) {
+                res.render("resetPassword", { user_id: tokenData._id });
+            } else {
+                res.render("404");
+            }
+        } catch (error) {
+            console.log(error);
+        }
+    };
+    static reset_Password1 = async (req, res) => {
+        try {
+            const { password, user_id } = req.body;
+            const newHashPassword = await bcrypt.hash(password, 10);
+            await UserModel.findByIdAndUpdate(user_id, {
+                password: newHashPassword,
+                token: "",
+            });
+            req.flash("success", "Reset Password Updated successfully ");
+            res.redirect("/");
+        } catch (error) {
+            console.log(error);
+        }
+    };
+
     static userinsert = async (req, res) => {
         try {
 
@@ -88,11 +145,23 @@ class FrontController {
                             }
                         })
                         //To save data
-                        await result.save();
+                        const userData = await result.save();
+                        if (userData) {
+                            //to generate token
+                            const token = jwt.sign({ ID: userData._id }, 'guptchabi@123456');
+                            //console.log(token)
+                            res.cookie('token', token)
+                            this.sendVerifyMail(n, e, userData._id)
+                            req.flash(
+                                "success", "Your Registeration has been successfully. Please verify your email"
+                            );
+                            res.redirect("/register");
 
-                        //To redirect to login page
-                        req.flash('success', 'Successfully Registered , Please Login .')
-                        res.redirect('/');
+                        } else {
+                            req.flash('error', 'Not a Verified User.')
+                            res.redirect('/register');
+
+                        }
                     } else {
                         req.flash('error', 'Password & Confirm Password must be Same.')
                         res.redirect('/register');
@@ -102,7 +171,45 @@ class FrontController {
                     res.redirect('/register');
                 }
             }
-        } catch(error) {
+        } catch (error) {
+            console.log(error)
+        }
+    }
+    static sendVerifyMail = async (n, e, user_id) => {
+        // console.log(name,email,status,comment)
+        // connenct with the smtp server
+
+        let transporter = await nodemailer.createTransport({
+            host: "smtp.gmail.com",
+            port: 587,
+
+            auth: {
+                user: "salonigarg152@gmail.com",
+                pass: "wpjkltrnlcynqruu",
+            },
+        });
+        let info = await transporter.sendMail({
+            from: "test@gmail.com", // sender address
+            to: e, // list of receivers
+            subject: "For Verification mail", // Subject line
+            text: "heelo", // plain text body
+            html:
+                "<p>Hii " +
+                n +
+                ',Please click here to <a href="http://localhost:3000/verify?id=' +
+                user_id +
+                '">Verify</a>Your mail</p>.',
+        });
+    };
+    static verify = async (req, res) => {
+        try {
+            const updateinfo = await UserModel.findByIdAndUpdate(req.query.id, {
+                is_verified: 1,
+            });
+            if (updateinfo) {
+                res.redirect("/home");
+            }
+        } catch (error) {
             console.log(error)
         }
     }
@@ -115,49 +222,34 @@ class FrontController {
                 const isMatch = await bcrypt.compare(password, user.password)
                 if (isMatch) {
                     //admin login
-                    console.log(user.role)
-                    if(user.role ==='admin')
-                    {
-                         //to generate login
-                    const token = jwt.sign({ ID: user.id }, 'guptchabi@123456');
-                    //console.log(token)
-                    res.cookie('token', token)
-                    res.redirect('/admin/dashboard')
-                    }
-
-                    else{
-                    //to generate token
-                    const token = jwt.sign({ ID: user.id }, 'guptchabi@123456');
-                    //console.log(token)
-                    res.cookie('token', token)
-                    res.redirect('/home')
+                    if (user.role === "admin" && user.is_verified == 1) {
+                        const token = jwt.sign({ ID: user._id }, "guptchabi@123456");
+                        //console.log(token)
+                        res.cookie("token", token);
+                        res.redirect("/admin/dashboard");
+                    } else if (user.role === "user" && user.is_verified == 1) {
+                        const token = jwt.sign({ ID: user._id }, "guptchabi@123456");
+                        //console.log(token)
+                        res.cookie("token", token);
+                        res.redirect("/home");
+                    } else {
+                        req.flash('error', 'please verified email address')
+                        res.redirect('/');
                     }
                 } else {
-                    req.flash('error', 'Email or password is not valid.')
+                    req.flash('error', 'You are not a registered user.')
                     res.redirect('/');
                 }
-            } else {
-                req.flash('error', 'You are not a registered user.')
-                res.redirect('/');
             }
         }
         catch (error) {
-            console.log(error);
+                console.log(error);
+            }
         }
-    }
-    // static logout = async (req, res) => {
-    //     try {
-    //         res.clearCookie('token'); //clearcookie--->token ko clear krne k lie
-    //         res.redirect('/')
-    //     } catch {
-    //         console.log(error)
-    //     }
-    // }
-
     static logout = async (req, res) => {
         try {
             res.clearCookie('token'); //clearcookie--->token ko clear krne k lie
-            req.flash('success','Successfully Logged Out.')
+            req.flash('success', 'Successfully Logged Out.')
             res.redirect('/')
         } catch {
             console.log(error)
@@ -165,21 +257,21 @@ class FrontController {
     }
 
     static profile = async (req, res) => {
-        try{
-            const {name,image,email,id} = req.userData;
-            res.render('profile',{n:name , i:image , e:email , id:id , message:req.flash('success'),msg:req.flash('error')});
-        }catch(err){
+        try {
+            const { name, image, email, id } = req.userData;
+            res.render('profile', { n: name, i: image, e: email, id: id, message: req.flash('success'), msg: req.flash('error') });
+        } catch (err) {
             console.log(err);
         }
     }
 
     static updateProfile = async (req, res) => {
-        try{
+        try {
             // const {name,image,email,id} = req.userData;
             // console.log(req.body)
             // console.log(req.files.image)
             const { id } = req.userData
-            const {name,email} =req.body
+            const { name, email } = req.body
             if (req.files) {
                 const user = await UserModel.findById(id)
                 const imageID = user.image.public_id
@@ -209,15 +301,15 @@ class FrontController {
             await UserModel.findByIdAndUpdate(id, data)
             req.flash('success', "Profile Updated successfully")
             res.redirect('/profile')
-        }catch(err){
+        } catch (err) {
             console.log(err);
         }
     }
     static changePassword = async (req, res) => {
-        try{
-            const {id} = req.userData;
+        try {
+            const { id } = req.userData;
             // console.log(req.body);
-            const {op , np , cp} = req.body;
+            const { op, np, cp } = req.body;
             if (op && np && cp) {
                 const user = await UserModel.findById(id)
                 const isMatched = await bcrypt.compare(op, user.password)
@@ -242,10 +334,35 @@ class FrontController {
                 req.flash('error', 'All fields are required')
                 res.redirect('/profile')
             }
-        }catch(err){
+        } catch (err) {
             console.log(err);
         }
     }
+    static sendEmail = async (name, email, token) => {
+        // console.log(name,email,status,comment)
+        // connenct with the smtp server
 
+        let transporter = await nodemailer.createTransport({
+            host: "smtp.gmail.com",
+            port: 587,
+
+            auth: {
+                user: "salonigarg152@gmail.com",
+                pass: "wpjkltrnlcynqruu",
+            },
+        });
+        let info = await transporter.sendMail({
+            from: "test@gmail.com", // sender address
+            to: email, // list of receivers
+            subject: "Reset Password", // Subject line
+            text: "heelo", // plain text body
+            html:
+                "<p>Hii " +
+                name +
+                ',Please click here to <a href="http://localhost:3000/reset-password?token=' +
+                token +
+                '">Reset</a>Your Password.',
+        });
+    };
 }
 module.exports = FrontController
